@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My Experiments</title>
+  <style type="text/css">
+  body {
+    margin: 0;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    font-family: sans-serif;
+    background-color: #000;
+  }
+  .card {
+    position: relative;
+    display: inline-block;
+    float: left;
+    overflow: hidden;
+    width: 50%;
+    height: 50vw;
+    background-size: cover;
+    background-position: 50% 50%;
+    transition: transform 500ms;
+    transform: rotateY(180deg);
+  }
+  @media screen and (min-width: 35.5em) {
+    .card {
+      width: 50%;
+      height: 50vw;
+    }
+    .featured {
+      width: 100%;
+    }
+    h1 {
+      font-size: 1.2em;
+    }
+  }
+  @media screen and (min-width: 48em) {
+    .card {
+      width: 33.333%;
+      height: 33.333vw;
+    }
+    .featured {
+      width: 66.663%;
+      height: 66.663vw;
+    }
+    h1 {
+      font-size: 1.5em;
+    }
+  }
+  @media screen and (min-width: 64em) {
+    .card {
+      width: 25%;
+      height: 25vw;
+    }
+    .featured {
+      width: 50%;
+      height: 50vw;
+    }
+  }
+  @media screen and (min-width: 100em) {
+    .card {
+      width: 16.666%;
+      height: 16.666vw;
+    }
+    .featured {
+      width: 33.33%;
+      height: 33.33vw;
+    }
+  }
+  .description {
+    position: absolute;
+    width: 100%;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: #eee;
+    box-sizing: border-box;
+    padding: 12px;
+    opacity: 0.9;
+    transition: opacity 400ms, background-color 400ms;
+  }
+  .card:hover .description {
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0.8);
+  }
+  h1 {
+    margin: 0 0 2px;
+  }
+  h1 span {
+    position: relative;
+    vertical-align: middle;
+    height: 24px;
+    border-radius: 15px;
+    padding: 2px 5px;
+    font-size: 14px;
+  }
+  .comp {
+    background-color: #76FF03;
+    color: #000;
+  }
+  .prog {
+    background-color: #03A9F4;
+    color: #000;
+  }
+  .coll {
+    background-color: #3F51B5;
+    color: #fff;
+  }
+  .susp {
+    background-color: #FF9800;
+    color: #000;
+  }
+  .idea {
+    background-color: #E91E63;
+    color: #fff;
+  }
+  .prot {
+    background-color: #FFEB3B;
+    color: #000;
+  }
+  .back {
+    position: fixed;
+    left: 1em;
+    top: 1em;
+    width: 2em;
+    height: 2em;
+    border-radius: 1em;
+    z-index: 2;
+    text-align: center;
+    vertical-align: middle;
+    font-size: 2em;
+    line-height: 200%;
+    background-color: #39c5bb;
+    color: #000;
+    box-shadow: 0 2px 2px 1px rgba(0, 0, 0, 0.7);
+    text-decoration: none;
+  }
+  .back:hover {
+    box-shadow: 0 3px 4px 3px rgba(0, 0, 0, 0.6);
+  }
+  .footer {
+    position: relative;
+    float: none;
+    clear: both;
+    width: 100%;
+    height: auto;
+    bottom: 0;
+    text-align: center;
+    color: #eee;
+    padding: 2em;
+    box-sizing: border-box;
+  }
+  </style>
+</head>
+<body>
+  <!-- Card template >
+  <a href="">
+    <div class="card" style="background-image: url('');">
+      <div class="description">
+        <h1>Title</h1>
+        <span>Lorem Ipsum</span>
+      </div>
+    </div>
+  </a>
+  < END Card template -->
+  <a class="back" href="index.html">&larr;</a>
+  <a href="https://charcoding.github.io/Schematica">
+    <div class="card featured" style="background-image: url('images/schematica.png');">
+      <div class="description">
+        <h1>Schematica<br><span class="prog">Ongoing</span> <span class="coll">Collaboration</span></h1>
+        <span>A lisp-style browser-based interpreter for programming and rendering diagrams.</span>
+      </div>
+    </div>
+  </a>
+  <a href="https://charcoding.github.io/TCG-Block-Cipher/">
+    <div class="card" style="background-image: url('images/tcg.png');">
+      <div class="description">
+        <h1>TCG Block Cipher<br><span class="prog">Ongoing</span></h1>
+        <span>A "homebrew" (read: insecure) symmetric block cipher.</span>
+      </div>
+    </div>
+  </a>
+  <a href="https://charcoding.github.io/Try-to-Fit-in">
+    <div class="card" style="background-image: url('images/ttfi.png');">
+      <div class="description">
+        <h1>Try to Fit in<br><span class="comp">Completed</span></h1>
+        <span>A game about fitting in with others.</span>
+      </div>
+    </div>
+  </a>
+  <a href="https://charcoding.github.io/2d-Misere-Nim">
+    <div class="card" style="background-image: url('images/nim.png');">
+      <div class="description">
+        <h1>2D Misere Nim<br><span class="comp">Completed</span></h1>
+        <span>A 2D adaptation of the poset game Nim.</span>
+      </div>
+    </div>
+  </a>
+  <a href="https://charcoding.github.io/Annext">
+    <div class="card" style="background-image: url('images/annext.png'); float: right;">
+      <div class="description">
+        <h1>Annext<br><span class="susp">Suspended</span> <span class="coll">Collaboration</span></h1>
+        <span>A strategic multiplayer game about annexation and world domination.</span>
+      </div>
+    </div>
+  </a>
+  <a href="https://charcoding.github.io/SI-Units-Browser/units.html">
+    <div class="card" style="background-image: url('images/units.png');">
+      <div class="description">
+        <h1>Unit Browser<br><span class="susp">Suspended</span></h1>
+        <span>Build and explore the International System of Units.</span>
+      </div>
+    </div>
+  </a>
+  <a href="https://charcoding.github.io/Nerror/nerror.html">
+    <div class="card" style="background-image: url('images/nerror.png');">
+      <div class="description">
+        <h1>Nerror<br><span class="susp">Suspended</span></h1>
+        <span>An esoteric rogramming language that never errors.</span>
+      </div>
+    </div>
+  </a>
+  <a href="https://docs.google.com/document/d/1zWo2kdWDNpUr836AbQU93GKzrcC0tgaOAB9SAAOldH4/edit?usp=sharing">
+    <div class="card" style="background-image: url('https://www.gstatic.com/images/branding/product/1x/docs_96dp.png');">
+      <div class="description">
+        <h1>VirusTyper<br><span class="idea">Idea</span></h1>
+        <span>A game where you create computer viruses to infect the Internet.</span>
+      </div>
+    </div>
+  </a>
+  <a href="dd.html">
+    <div class="card" style="background-image: url('images/drone.png');">
+      <div class="description">
+        <h1>Drone Duel<br><span class="prot">Prototype</span></h1>
+        <span>A game where you control drones to battle with fireworks.</span>
+      </div>
+    </div>
+  </a>
+  <div class="footer"><h2>"A work of art is never finished, only abandoned." - apparently many famous people</h2></div>
+  <script type="text/javascript">
+  const elem = document.getElementsByClassName('card');
+  for(let i = elem.length; i--;)
+    setTimeout(() => elem[i].style.transform = 'rotateY(0deg)', i * 64);
+  </script>
+</body>
+</html>

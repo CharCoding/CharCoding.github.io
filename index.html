@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Three body simulation</title>
+  <style type="text/css">
+  canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; margin: 0; background-color: #000; }
+  #menu {
+    position: absolute;
+    left: 2vmax;
+    top: 2vmax;
+    width: 500px;
+    min-height: 500px;
+    padding: 12px;
+    background-color: rgba(42, 42, 42, 0.5);
+    color: #888;
+    font-family: monospace;
+    font-size: 2em;
+    box-sizing: border-box;
+    transition: all 500ms;
+  }
+  h2 {
+    margin: 16px 0;
+    color: #bbb;
+  }
+  a {
+    color: #bbb;
+    text-decoration: none;
+  }
+  a:hover {
+    text-decoration: underline;
+    text-decoration-color: rgba(187, 187, 187, 0.5);
+  }
+  </style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+  <div id="menu">
+    <h2>Hello, world!</h2>
+    I'm <a href="#">Charly</a>, an undergraduate student in the class of 2023 studying mathematics and computer science at the<br />
+    <a href="https://umich.edu/">University of Michigan</a>.<br />
+    I make <a href="experiments.html">experiments</a> like this on <a href="https://github.com/CharCoding/">GitHub</a>, read <a href="https://xkcd.com/">xkcd</a>, write <a href="#">stuff</a>, and play <a href="https://minecraft.net/">Minecraft</a>.<br /><br />
+    <small>This animation is inspired by<br /><i><a href="https://en.wikipedia.org/wiki/The_Three-Body_Problem_(novel)">The Three-Body Problem</a></i>. It might drain your battery, but you can click on the background to pause it. <a id="zen" href="#">[Zen mode]</a></small>
+  </div>
+  <script type="text/javascript">'use strict';
+let timer, movementPause = false, focus = 7, w = window.innerWidth, h = window.innerHeight, w_2 = w / 2, h_2 = h / 2, drawWireframe = true;
+const t = c.getContext('2d'),
+  G = 6.674e-11,/* Smass = 2e30, Sradius = 7e5, AU = 149597900, */TAU = Math.PI * 2,
+  rand = x => () => (x = 137 * (x * (x + 1) >>> 1) + 9531382 & 16777215) / 16777216,
+  cross = (a, b, c, d, e, f) => [b * f - c * e, c * d - a * f, a * e - b * d],
+  //dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z),
+  dot = (a, b, c, d, e, f) => a * d + b * e + c * f,
+  gravity = (a, b) => {
+    const dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z,
+      GOverR3 = G / Math.hypot(dx, dy, dz) ** 3, aAccel = GOverR3 * b.mass, bAccel = GOverR3 * a.mass;
+    a.vx += dx * aAccel; a.vy += dy * aAccel; a.vz += dz * aAccel;
+    b.vx -= dx * bAccel; b.vy -= dy * bAccel; b.vz -= dz * bAccel;
+  }, bodies = [], bg = [], camera = {
+    // plane equation: Ax + By + Cz = D
+    // ang: 0, // for animation
+    x: 2e3, y: 1e3, z: -2e3, // plane position
+    lx: 0, ly: 0, lz: 0, // lookAt
+    perspective: 1000, // plane equation: (lookAt - position) dot position = dist
+    n: new Float64Array(3),
+    pinhole: new Float64Array(3),
+    alpha: new Float64Array(2),
+    beta: new Float64Array(3),
+    update: function() {
+      const a = this.x - this.lx, b = this.y - this.ly, c = this.z - this.lz,
+        abcR = Math.hypot(a, b, c);
+      this.n[0] = a / abcR;
+      this.n[1] = b / abcR;
+      this.n[2] = c / abcR; // normal vector
+      //this.dist = dot(...this.n, camera.x, camera.y, camera.z); // distance of plane from origin
+      const acR = Math.hypot(this.n[0], this.n[2]), b_acR = this.n[1] / acR;
+      this.alpha[0] = this.n[2] / -acR;
+      this.alpha[1] = this.n[0] / acR; // vector perpendicular to normal vector and y-axis (x-axis pixel vector)
+      this.beta[0] = this.n[0] * b_acR;
+      this.beta[1] = -acR;
+      this.beta[2] = this.n[2] * b_acR; // vector perpendicular to normal vector and coplanar with y-axis (y-axis pixel vector)
+      // alpha and beta are unit vectors in the imaging plane
+      this.pinhole[0] = this.n[0] * this.perspective + this.x;
+      this.pinhole[1] = this.n[1] * this.perspective + this.y;
+      this.pinhole[2] = this.n[2] * this.perspective + this.z;
+      // actual eye position: ~1000 pixels from the screen, controlled by perspective (Field of view)
+    },
+    project: function(x, y, z) {
+      x -= this.pinhole[0]; y -= this.pinhole[1]; z -= this.pinhole[2]; // get vector from (x, y, z) to pinhole
+        //bodyDist = Math.hypot(M, N, O), // get dist from (x, y, z) to pinhole
+        //camDist = (this.dist - dot(...this.n, ...this.pinhole)) / dot(...this.n, M, N, O); // find distance to plane
+      const camDist = -this.perspective / dot(...this.n, x, y, z);
+        //S = camDist * P, T = camDist * Q, U = camDist * R; // multiply by normalized vector
+      if(camDist < 0) // this is actually inaccurate, but it's close enough and I can't be bothered to fix
+        return [(x * this.alpha[0] + z * this.alpha[1]) * -camDist, dot(x, y, z, ...this.beta) * -camDist, camDist];
+      return [(x * this.alpha[0] + z * this.alpha[1]) * camDist, dot(x, y, z, ...this.beta) * camDist, camDist]; // project x- and y-axis pixel vector onto vector from camera pinhole to plane. This gives the (x, y) pixel coordinates.
+    } // this code actually works. Probably took me 5 days of debugging.
+  }, keysPressed = new Uint8ClampedArray(99);
+camera.update();
+c.width = w; c.height = h;
+t.translate(w_2, h_2); // center canvas;
+  // 1.496e8 km
+  // Alpha Centauri A is 11.2~35.6 AU away from B; Alpha Centauri C is 13000 AU away from A and B
+  // Note that the cycle period is ridiculously long (unlike here)
+  // Average distance from center is ~6500 AU = 972 386 200 000 km = 9.723862e11 km
+  // maybe AU is a better unit? Screen has 1920x1080 pixels.
+  // 1 pixel = 1e9 km?
+class Body{
+  constructor(x, y, z, vx, vy, vz, radius, mass, color){
+    this.x = x;
+    this.y = y;
+    this.z = z;
+    this.moved = 0;
+    this.trail = new Array(30);
+    this.vx = vx;
+    this.vy = vy;
+    this.vz = vz;
+    this.radius = radius; // there was some radius to mass relation... don't care;
+    this.mass = mass; // can't figure out pixel to meter conversion anyway
+    this.color = color;
+    for(let i = 30; i--;)
+      this.trail[i] = Float32Array.of(x, y, z);
+  }
+  move(){
+    this.x += this.vx;
+    this.y += this.vy;
+    this.z += this.vz;
+    this.moved += Math.hypot(this.vx, this.vy, this.vz); // update trail if moved too much
+    if(this.moved > 25) {
+      this.trail.shift();
+      this.trail.push(Float32Array.from(this));
+      this.moved = 0;
+      /*
+      if(Math.hypot(...this) > 32768) {
+        // respawn a body if it's too far away
+        this.x = this.vx * -2000;
+        this.y = this.vy * -1000;
+        this.z = this.vz * 2000;
+        this.vy = 0;
+        this.vx *= .1;
+        this.vz *= -.1;
+        for(let i = 30; i--;)
+          this.trail[i] = Float32Array.from(this);
+      }
+      */
+    }
+  }
+  draw(){
+    t.strokeStyle = t.fillStyle = this.color;
+    t.beginPath();
+    const [x, y, r] = camera.project(...this);
+    if(r < 0) // scale factor < 0 means object is behind the pinhole in the direction of lookAt. Don't draw in this case.
+      return; // objects are actually ok with appearing in front of the imaging plane
+    t.arc(x, y, this.radius * r, 0, TAU);
+    t.fill();
+    t.beginPath();
+    t.moveTo(x, y);
+    for(let i = this.trail.length; i--;)
+      t.lineTo(...camera.project(...this.trail[i]));
+    t.stroke();
+  }
+  *[Symbol.iterator]() { // wow, syntax.
+    yield this.x;
+    yield this.y;
+    yield this.z;
+  } // this is so that [...body] returns [body.x, body.y, body.z]
+}
+// impulse stays approx. constant (note, this is using same mass)
+function generate(seed) {
+  const r = rand(seed);
+  const a = new Body(r() * -960, r() * 486.5, r() * 1000, r() - .5, r() - .5, r() - .5, 25, 1.96e13, '#f00');
+  const b = new Body(r() * 960, r() * -486.5, r() * 1000, r() - .5, r() - .5, r() - .5, 25, 1.96e13, '#0f0');
+  const c = new Body(-a.x - b.x, -a.y - b.y, -a.z - b.z, -a.vx - b.vx, -a.vy - b.vy, -a.vz - b.vz, 25, 1.96e13, '#00f');
+  const d = new Body(1400, 0, 1400, -.7, 0, .7, 6, 1, '#0ff');
+  const e = new Body(-1400, 0, -1400, .7, .1, -.7, 6, 1, '#f0f');
+  const f = new Body(c.x + 100, c.y + 100, c.z + 100, c.vx - 2, c.vy + 1, c.vz + 1, 6, 1, '#ff0');
+  bodies.push(a, b, c, d, e, f);
+  for(let i = 137; i--;) {
+    const inc = r() * Math.PI, azi = r() * TAU, rs = 65536 * Math.sin(inc);
+    bg.push(Float32Array.of(rs * Math.cos(azi), rs * Math.sin(azi), 65536 * Math.cos(inc)));
+  }
+}
+generate(13);//wow this seed is good - half an hour of simulation without collisions.
+function draw(now) {
+  // camera lookAt control
+  if(focus == bodies.length + 1) {
+    const [a, b, c] = cross(bodies[0].x - bodies[1].x, bodies[0].y - bodies[1].y, bodies[0].z - bodies[1].z,
+                    bodies[1].x - bodies[2].x, bodies[1].y - bodies[2].y, bodies[1].z - bodies[2].z),
+      d = 2000 / Math.hypot(a, b, c);
+    camera.x = a * d;
+    camera.y = b * d;
+    camera.z = c * d;
+  } else if(focus == bodies.length) {
+    camera.lx += keysPressed[39] - keysPressed[37]; // arrow keys <->
+    camera.ly += keysPressed[38] - keysPressed[40]; // arrow keys ^ v
+    camera.lz += keysPressed[81] - keysPressed[69]; // Q: forward, E: backward
+  } else {
+    camera.lx = bodies[focus].x;
+    camera.ly = bodies[focus].y;
+    camera.lz = bodies[focus].z;
+  }
+  // if(movementPause) { // camera position control
+  camera.x += keysPressed[68] - keysPressed[65]; // A: left, D: right
+  camera.y += keysPressed[32] - keysPressed[88]; // space: up, X: down
+  camera.z += keysPressed[87] - keysPressed[83]; // W: forward, S: backward
+  /*} else {  // rotate camera when p not pressed
+    camera.ang += 0.002;
+    camera.x = Math.cos(camera.ang) * 2e3;
+    camera.z = Math.sin(camera.ang) * 2e3;
+    camera.y = Math.sin(camera.ang * 2) * 1e3;
+  }*/
+  camera.update(); // update vectors
+  t.clearRect(-w_2, -h_2, w, h);
+  //t.fillStyle = 'rgba(0,0,0,0.0625)';
+  //t.fillRect(-w_2, -h_2, w, h);
+  t.fillStyle = '#fff';
+  for(let i = bg.length; i--;) {
+    const [x, y, r] = camera.project(...bg[i]);
+    if(r > 0)
+      t.fillRect(x, y, 2, 2);
+  }
+  if(drawWireframe) {
+    t.beginPath(); // draw wireframe (tried to "optimize" with for loop, not worth it)
+    t.moveTo(...camera.project(0, 0, -2e3));
+    t.lineTo(...camera.project(0, 0, 2e3));
+    t.moveTo(...camera.project(0, -2e3, 0));
+    t.lineTo(...camera.project(0, 2e3, 0));
+    t.moveTo(...camera.project(-2e3, 0, 0));
+    t.lineTo(...camera.project(2e3, 0, 0));
+    const [startX, startY] = camera.project(2e3, 0, 2e3);
+    t.moveTo(startX, startY);
+    t.lineTo(...camera.project(-2e3, 0, 2e3));
+    t.lineTo(...camera.project(-2e3, 0, -2e3));
+    t.lineTo(...camera.project(2e3, 0, -2e3));
+    t.lineTo(startX, startY);
+  }
+  t.strokeStyle = '#fff';
+  t.stroke();
+  if(!movementPause) { // if p is pressed, don't update body position
+    for(let i = bodies.length; i--;)
+      for(let j = i; j--;)
+        gravity(bodies[i], bodies[j]);
+    for(const body of bodies)
+      body.move();
+  }
+  for(const body of bodies)
+    body.draw();
+  timer = requestAnimationFrame(draw);
+}
+timer = requestAnimationFrame(draw);
+document.onkeydown = e => {
+  switch(e.keyCode) {
+    case 9: // press tab to switch focus
+      e.preventDefault();
+      focus++;
+      if(focus > bodies.length + 1)
+        focus = 0;
+      else if(focus == bodies.length)
+        camera.lx = camera.ly = camera.lz = 0;
+      break;
+    case 80:
+      movementPause = !movementPause;
+      break;
+    default:
+      keysPressed[e.keyCode] = 1;
+  }
+};
+zen.onclick = e => {
+  if(!document.fullscreenElement) {
+    c.requestFullscreen();
+    document.body.style.cursor = 'none';
+    drawWireframe = false;
+  }
+};
+c.onfullscreenchange = e => {
+  if(!document.fullscreenElement) {
+    document.body.style.cursor = 'auto';
+    drawWireframe = true;
+  }
+}
+c.addEventListener('click', e => {
+  if(timer) {
+    cancelAnimationFrame(timer);
+    timer = false;
+  } else
+    timer = requestAnimationFrame(draw);
+});
+document.addEventListener('keyup', e => keysPressed[e.keyCode] = 0);
+document.addEventListener('wheel', e => camera.perspective += e.deltaY);
+window.addEventListener('resize', e => {
+  c.width = w = window.innerWidth;
+  c.height = h = window.innerHeight;
+  w_2 = window.innerWidth / 2;
+  h_2 = window.innerHeight / 2;
+  t.translate(w_2, h_2);
+});
+  </script>
+</body>
+</html>

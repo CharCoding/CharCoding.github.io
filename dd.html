@@ -1,0 +1,349 @@
+<html>
+<head>
+	<title>Drone Duel</title>
+	<meta charset="UTF-8" />
+	<style type="text/css">
+	canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; margin: 0; background-color: #000; cursor: crosshair; }
+	#info { position: absolute; left: 0; top: 0; color: #fff; z-index: 4; font-family: consolas, monospace; }
+	</style>
+</head>
+<body>
+	<canvas id="c"></canvas>
+	<span id="info"></span>
+	<script type="text/javascript">'use strict';// see https://xkcd.com/1858/ for idea
+	const t = c.getContext('2d'), keys = new Array(95).fill(false),
+		mouse = { x: 0, y: 0, px: 0, py: 0, down: false, up: false }, TAU = Math.PI * 2, stars = [],
+		colors = ['#f00', '#0f0', '#00f', '#ff0', '#0ff', '#f0f'], // change to better colors later
+		fireworks = [], explosions = [], _r = n => Math.floor(Math.random() * (n || 6)),
+		// Lighten-convert: lighten and convert a #XXX color string to rgba format
+		LC = (c, a = 0.7) => 'rgba(' + c.replace(/f/g,'255,').replace(/0/g, Math.round(135 / a) + ',').slice(1) + a + ')';
+	let w = window.innerWidth, h = window.innerHeight, r = 1, timer,
+		propellerMin = 0.08, propellerMax = .1, wind = 0, windD = 0;
+	for (let i = 50; i--;) stars.push([Math.random() * w, Math.random() * (h - 10) + 10]);
+	c.width = w;
+	c.height = h;
+	t.font = '20px Arial';
+	// t.globalCompositeOperation = 'lighter';
+	t.setTransform(1, 0, 0, -1, w / 2, h - 10);
+	class Drone {
+		constructor(x, y){
+			this.x = x;
+			this.y = y;
+			this.dx = 0;
+			this.dy = 1;
+			this.ang = 0;
+			this.angMomentum = 0;
+			this.propellerAng = 6; // not actually an angle
+			this.battery = 5000;
+			this.health = 100;
+			this.maxSafeFallDistance = -5;
+			this.fireworks = 10; // not used...
+			this.fireworkCooldown = 0; // neither
+			this.fireworksAngle = 0;
+			this.maxFireworks = 10; //         ^
+			this.fireworkLevel = 0; //         | 10
+			this.hitBoxWidth = 24;  //    12   |   12
+			this.hitBoxHeight = 10; // <------ X ------>
+			// last two are not used...
+		}
+		move(){ // wtf this works?
+			this.fireworksAngle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+			let l = 0, r = 0, sum = 0;
+			if(this.y > 0){
+				this.dy -= .2; // gravity?
+				this.dx += wind / 100;
+			} else if(this.y > h * 2) {
+				if(this.dy > 0) this.dy *= 0.9;
+				else this.dy *= 1.1;
+			} else {
+				this.y = 0;
+				if(this.dy < this.maxSafeFallDistance) {
+					this.health += this.dy; // ouch
+					this.dx *= .9;
+					this.dy /= -3; // bounce?
+				} else {
+					this.dy = this.ang = 0;
+					this.dx /= 2;
+				}
+				this.propellerAng = 2; // stop animating propeller when on groud... wow this works
+			}
+			if(mouse.up && this.fireworkCooldown == 0) { // TODO: change aiming algorithm
+				mouse.up = false; //                      18 is firework speed, change to mouse downtime
+				const f = new Firework(player.x, player.y, player.fireworksAngle, mouse.down, mouse.down * 4, 6, colors[_r()]);
+				f.dx += this.dx / 2;
+				f.dy += this.dy / 2;
+				if(this.y > 0) { // opposite reaction?
+					this.dx -= Math.cos(player.fireworksAngle);
+					this.dy -= Math.sin(player.fireworksAngle);
+				}
+				fireworks.push(f);
+				this.fireworkCooldown = mouse.down;
+				mouse.down = 0;
+			}
+			if(this.fireworkCooldown > 0) this.fireworkCooldown -= .5;
+			if(this.battery > 0) {
+				if(keys[81]) r -= propellerMax; // Q: Right propeller reverse 2
+				if(keys[87]) r -= propellerMin; // W: Right propeller reverse 1
+				if(keys[69]) l -= propellerMin; // E: Left propeller reverse 1
+				if(keys[82]) l -= propellerMax; // R: Left propeller reverse 2
+				if(keys[65]) r += propellerMax; // A: Right propeller 2
+				if(keys[83]) r += propellerMin; // S: Right propeller 1
+				if(keys[68]) l += propellerMin; // D: Left propeller 1
+				if(keys[70]) l += propellerMax; // F: Left propeller 2
+				// 1 and 2 can be combined to create maximum thrust
+				// You can actually fly upside-down, but it takes practice.
+				sum = l + r;
+				if(l || r) this.battery -= Math.abs(l) + Math.abs(r);
+				else this.propellerAng = 2; // stop animating propeller when they aren't running?
+			} else {
+				this.propellerAng = 2; // stop animating propeller when out of battery
+				this.battery = 0;
+			}
+			this.angMomentum += Math.atan2(r - l, 40);
+			this.ang += this.angMomentum; // minor physics tweaking that no one will notice
+			this.angMomentum *= .9; // (actually helps when doing flips)
+			this.dx += Math.cos(this.ang + Math.PI / 2) * sum;
+			this.dy += Math.sin(this.ang + Math.PI / 2) * sum;
+			if(this.ang < Math.PI / 4 && this.ang > -Math.PI / 4 && this.y / Math.cos(this.ang) < 50) {
+				// when drone is near ground, the air will bounce back and provide higher thrust.
+				const repel = sum * (1 - this.y * Math.cos(this.ang) / 50);
+				// magic here don't look to close
+				//setTimeout((y, a) => {
+					//if(y / Math.cos(a) < 50) {
+						this.dy += Math.sin(this.ang + Math.PI / 2) * repel;
+						if(this.dx > 0) this.angMomentum -= repel * Math.cos(this.ang) / 500;
+						else if(this.dx < 0) this.angMomentum += repel * Math.cos(this.ang) / 500;
+					//}
+				//}, 50, this.y, this.ang);
+			}
+			this.x += this.dx;
+			this.y += this.dy;
+			//*// wrap around map (this will take a lot of work...)
+			if(this.x < -w){
+				for(let i = fireworks.length; i--;) fireworks[i].x += w;
+				for(let i = explosions.length; i--;) explosions[i].x += w;
+				computer.x += w;
+				this.x += w;// this.dx = -this.dx;
+			}
+			else if(this.x > w){
+				for(let i = fireworks.length; i--;) fireworks[i].x -= w;
+				for(let i = explosions.length; i--;) explosions[i].x -= w;
+				computer.x -= w;
+				this.x -= w;// this.dx = -this.dx;
+			}
+			//*/
+		}
+		draw(){
+			t.save();
+			t.translate(this.x, this.y);
+			t.rotate(this.ang);
+			t.beginPath();
+			t.moveTo(-12, 10);
+			t.lineTo(-12, 0);
+			t.lineTo(-10, 0);
+			t.lineTo(-7, 7);
+			t.lineTo(7, 7);
+			t.lineTo(10, 0);
+			t.lineTo(12, 0);
+			t.lineTo(12, 10);
+			t.closePath();
+			t.fillStyle = '#fff';
+			this.propellerAng ^= 4; // hack: make propellerAng oscillate between 6 and 2
+			//this.propellerAng = Math.cos(this.y) * 6;
+			t.fillRect(-11 - this.propellerAng, 11, this.propellerAng * 2, 1);
+			t.fillRect(11 - this.propellerAng, 11, this.propellerAng * 2, 1);
+			t.fill();
+			if(this.dy < this.maxSafeFallDistance) { // stalling (need better graphics)
+				t.rotate(-this.ang);
+				t.beginPath();
+				t.moveTo(-17.32, 15);
+				t.lineTo(17.32, 15);
+				t.lineTo(0, -15);
+				t.closePath();
+				t.strokeStyle = '#f00';
+				t.stroke();
+			}
+			t.restore();
+		}
+	}
+	class Firework {
+		constructor(x, y, ang, speed, flightDuration, particles, color){
+			this.coords = new Array(10);
+			for (let i = 10; i--;) this.coords[i] = [x, y];
+			this.ang = ang;
+			this.speed = speed;
+			this.dx = Math.cos(ang) * speed;
+			this.dy = Math.sin(ang) * speed;
+			this.flightDuration = flightDuration;
+			this.particles = particles;
+			this.color = color;
+			this.exploded = false;
+		}
+		move(){
+			this.dx += wind / 100;
+			this.dy -= .2;
+			this.coords.shift();
+			let [x, y] = this.coords[8];
+			x += this.dx;
+			y += this.dy;
+			if(y < 0) { // bounce
+				y = 0;
+				this.dy *= -.9;
+				this.dx *= .9;
+			}
+			this.coords.push([x, y]);
+			if(--this.flightDuration < 0 && !this.exploded) {
+				// particles can be an array (e.g. [6, 3, 2]), a.k.a nested fireworks (RIP performance)
+				let particles = this.particles.length ? this.particles.shift() : this.particles,
+				childParticles = this.particles.length ? this.particles[0] : 0;
+				for (let i = particles, ang = Math.random() * Math.PI; i--; ang += TAU / particles)
+					fireworks.push(new Firework(x, y, ang, this.speed / 2.5, 15 - childParticles, childParticles, colors[_r()]));
+				this.exploded = true;
+				explosions.push(new Explosion(x, y, this.speed >>= 1, this.color, 10 + _r(3), this.speed));
+			}
+		}
+		draw(){
+			if(this.flightDuration < 0) return;
+			t.beginPath();
+			t.strokeStyle = this.color;
+			t.fillStyle = LC(this.color, 0.9);
+			t.moveTo.apply(t, this.coords[9]);
+			for (let i = this.coords.length; i--;){
+				let [x, y] = this.coords[i];
+				t.lineTo(x, y);
+				t.fillRect(2 * x - this.coords[9][0] - 5 + Math.random() * 10, 2 * y - this.coords[9][1] - 5 + Math.random() * 10, 1, 1); // Boi those are some nice particles
+			}
+			t.stroke();
+			/*
+			t.beginPath();
+			t.arc(this.coords[9][0], this.coords[9][1], 3, 0, TAU);
+			t.fillStyle = LC(this.color);
+			t.fill();
+			*/
+		}
+	}
+	class Explosion{
+		constructor(x, y, radius, color, time, damage){
+			this.x = x;
+			this.y = y;
+			this.r = radius;
+			this.c = color;
+			this.t = time;
+			this.d = damage;
+		}
+		explode(){
+			this.x += wind;
+			t.beginPath();
+			t.arc(this.x, this.y, this.r += 0.5, 0, TAU);
+			t.fillStyle = LC(this.c);
+			t.strokeStyle = this.c;
+			t.fill();
+			t.stroke();
+			t.fillStyle = LC(this.c, 0.9);
+			for(let i = 3; i--;)
+				t.fillRect(
+					this.x + Math.random() * this.r - this.r / 2,
+					this.y + Math.random() * this.r - this.r / 2,
+					1.6, 1.6
+				);
+			if(Math.hypot(this.x - player.x, this.y - player.y) < this.r + 10) player.health -= this.d;
+			if(Math.hypot(this.x - computer.x, this.y - computer.y) < this.r + 10) computer.health -= this.d;
+			return this.t--;
+		}
+	}
+	const player = new Drone(0, 1), computer = new Drone(120, 1);
+	/*
+	computer.move = function(){
+		this.x += wind;
+	};
+	*/
+	function draw(){
+		t.save();
+		t.setTransform(1, 0, 0, 1, 0, 0);
+		/* sorry, removing this although it's pretty
+		t.fillStyle = 'rgba(0,0,0,0.2)';
+		t.fillRect(0, 0, w, h);
+		//*/
+		t.clearRect(0, 0, w, h);
+		t.fillStyle = `rgba(255, 255, 0, ${Math.abs(wind)})`;
+		t.fillRect(w / 2, 0, wind * w / 2, 3);
+		t.fillStyle = '#fff';
+		for(let i = stars.length; i--;) {
+			let [x, y] = stars[i];
+			t.fillRect(x, y, 2, 2);
+			x -= player.dx / 10;
+			y += player.dy / 10;
+			if(x > w) x -= w;
+			else if(x < 0) x += w;
+			if(y > h) y -= h;
+			else if(y < 0) y += h;
+			stars[i] = [x, y];
+		}
+		t.restore();
+		/*
+		let x = Math.abs(player.x - computer.x) + Math.abs(player.dx) + Math.abs(computer.dx) + 100,
+		y = Math.abs(player.y - computer.y) + Math.abs(player.dy) + Math.abs(computer.dy) + 50,
+		cx = (player.x + computer.x) / 2, cy = (player.y + computer.y) / 2;
+		// r = Math.min(1 / Math.max(y / h, x / w), 1); // caps zoom at 1 maximum
+		// causes unnatural (although correct) movement when entering the zoom x1 range from outside
+		r = 1 / Math.max(y / h, x / w); // magnifies too much when the drones are too close to each other
+		tx = w / 2 - cx * r; // expose transformation matrix for calculating real mouse position
+		ty = Math.max(h / 2 + cy * r, h - 10 * r); // attempt to show minimum below-ground areas
+		// centers the canvas to the midpoint of the drones, scale out so that both are visible on screen
+		t.setTransform(r, 0, 0, -r, tx, ty); // wow this works?
+		mouse.x = (mouse.px - tx) / r; // yes, apparently, after hours of trial-and-error.
+		mouse.y = (ty - mouse.py) / r; // mostly error
+		*/
+		t.setTransform(1, 0, 0, -1, w / 2 - player.x, Math.max(player.y + h / 2, h - 10));
+		mouse.x = mouse.px - w / 2 + player.x;
+		mouse.y = Math.max(player.y + h / 2, h - 10) - mouse.py;
+		if(mouse.down && mouse.down < 20) mouse.down += 0.5;
+		t.strokeStyle = 'green';
+		t.beginPath();
+		t.moveTo(player.x - w, 0);
+		t.lineTo(player.x + w, 0);
+		t.stroke();
+		if(timer % 20 == _r(20)) fireworks.push(new Firework(_r(w) - w / 2 + player.x, 0, 1.5 + Math.random() * .1416, _r(15) + 13, _r(30) + 50, _r() + 4, colors[_r()]), new Firework(_r(w) - w / 2 + player.x, 0, 1.5 + Math.random() * .1416, _r(15) + 13, _r(30) + 50, _r() + 4, colors[_r()]));
+		else {
+			windD += Math.random() * .2 - .1;
+			wind = Math.max(Math.min(wind + windD / 100, 1), -1);
+			if(Math.abs(windD) > .8) windD = 0;
+		}
+		for (let i = fireworks.length; i--;) { // unroll fireworks loop
+			const firework = fireworks[i];
+			firework.move();
+			firework.draw();
+			if(firework.exploded) fireworks.splice(i, 1);
+		}
+		for (let i = explosions.length; i--;) { // unroll explosions loop
+			const explosion = explosions[i];
+			if(explosion.explode() < 0) explosions.splice(i, 1);
+		}
+		player.move();
+		player.draw();
+		computer.move();
+		computer.draw();
+		//info.innerText = `PX:${player.x.toFixed(2)}, PY:${player.y.toFixed(2)}, DX:${player.dx.toFixed(2)}, DY:${player.dy.toFixed(2)}, PA:${player.ang.toFixed(2)}, PB:${player.battery.toFixed(2)}, PH:${player.health.toFixed(2)}\nS:${r.toFixed(2)}, F:${fireworks.length}, MX:${mouse.x.toFixed(2)}, MY:${mouse.y.toFixed(2)}`;
+		if(player.health < 0) alert('You died!');
+		else if(computer.health < 0) alert('You win!');
+		else timer = requestAnimationFrame(draw);
+	}
+	document.addEventListener('keydown', e => {
+		keys[e.keyCode] = true;
+		if(e.keyCode == 80){
+			if(timer) {
+				cancelAnimationFrame(timer);
+				timer = false;
+			} else timer = requestAnimationFrame(draw);
+		}
+	});
+	document.addEventListener('keyup', e => keys[e.keyCode] = false);
+	document.addEventListener('mousedown', e => mouse.down = 1);
+	document.addEventListener('mouseup', e => { mouse.up = true; }); // mouse.down is reset inside Drone.move()
+	document.addEventListener('mousemove', e => { mouse.px = e.pageX; mouse.py = e.pageY; });
+	document.addEventListener('contextmenu', e => cancelAnimationFrame(timer));
+	// timer = setInterval(draw, 40);
+	draw();
+	</script>
+</body>
+</html>
