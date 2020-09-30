@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!--meta name="viewport" content="width=device-width, initial-scale=1"-->
   <title>My Experiments</title>
   <style type="text/css">
   body {
@@ -244,7 +244,7 @@
   <script type="text/javascript">
   const elem = document.getElementsByClassName('card');
   for(let i = elem.length; i--;)
-    setTimeout(() => elem[i].style.transform = 'rotateY(0deg)', i * 64);
+    setTimeout(() => elem[i].style.transform = 'rotateY(0deg)', (i + 2) * 64);
   </script>
 </body>
 </html>

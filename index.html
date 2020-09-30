@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- Go Blue! -->
 <html>
 <head>
   <meta charset="utf-8" />
@@ -37,15 +38,15 @@
   <canvas id="c"></canvas>
   <div id="menu">
     <h2>Hello, world!</h2>
-    I'm <a href="#">Charly</a>, an undergraduate student in the class of 2023 studying mathematics and computer science at the<br />
+    I'm <a href="about.html">Charly</a>, an undergraduate student in the class of 2023 studying mathematics and computer science at the<br />
     <a href="https://umich.edu/">University of Michigan</a>.<br />
-    I make <a href="experiments.html">experiments</a> like this on <a href="https://github.com/CharCoding/">GitHub</a>, read <a href="https://xkcd.com/">xkcd</a>, write <a href="#">stuff</a>, and play <a href="https://minecraft.net/">Minecraft</a>.<br /><br />
+    I make <a href="experiments.html">experiments</a> like this on <a href="https://github.com/CharCoding/">GitHub</a>, read <a href="https://xkcd.com/">xkcd</a>, write <a href="writing.html">stuff</a>, and play <a href="https://minecraft.net/">Minecraft</a>.<br /><br />
     <small>This animation is inspired by<br /><i><a href="https://en.wikipedia.org/wiki/The_Three-Body_Problem_(novel)">The Three-Body Problem</a></i>. It might drain your battery, but you can click on the background to pause it. <a id="zen" href="#">[Zen mode]</a></small>
   </div>
   <script type="text/javascript">'use strict';
 let timer, movementPause = false, focus = 7, w = window.innerWidth, h = window.innerHeight, w_2 = w / 2, h_2 = h / 2, drawWireframe = true;
 const t = c.getContext('2d'),
-  G = 6.674e-11,/* Smass = 2e30, Sradius = 7e5, AU = 149597900, */TAU = Math.PI * 2,
+  G = 6.6743e-11,/* Smass = 2e30, Sradius = 7e5, AU = 149597900, */TAU = Math.PI * 2,
   rand = x => () => (x = 137 * (x * (x + 1) >>> 1) + 9531382 & 16777215) / 16777216,
   cross = (a, b, c, d, e, f) => [b * f - c * e, c * d - a * f, a * e - b * d],
   //dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z),
@@ -55,12 +56,12 @@ const t = c.getContext('2d'),
       GOverR3 = G / Math.hypot(dx, dy, dz) ** 3, aAccel = GOverR3 * b.mass, bAccel = GOverR3 * a.mass;
     a.vx += dx * aAccel; a.vy += dy * aAccel; a.vz += dz * aAccel;
     b.vx -= dx * bAccel; b.vy -= dy * bAccel; b.vz -= dz * bAccel;
-  }, bodies = [], bg = [], camera = {
+  }, bodies = [], bg = [], camera = { // Imagine building a 3D projector using trig functions and matrices...
     // plane equation: Ax + By + Cz = D
     // ang: 0, // for animation
     x: 2e3, y: 1e3, z: -2e3, // plane position
     lx: 0, ly: 0, lz: 0, // lookAt
-    perspective: 1000, // plane equation: (lookAt - position) dot position = dist
+    perspective: 1e3, // plane equation: (lookAt - position) dot position = dist
     n: new Float64Array(3),
     pinhole: new Float64Array(3),
     alpha: new Float64Array(2),
@@ -169,10 +170,10 @@ function generate(seed) {
   const r = rand(seed);
   const a = new Body(r() * -960, r() * 486.5, r() * 1000, r() - .5, r() - .5, r() - .5, 25, 1.96e13, '#f00');
   const b = new Body(r() * 960, r() * -486.5, r() * 1000, r() - .5, r() - .5, r() - .5, 25, 1.96e13, '#0f0');
-  const c = new Body(-a.x - b.x, -a.y - b.y, -a.z - b.z, -a.vx - b.vx, -a.vy - b.vy, -a.vz - b.vz, 25, 1.96e13, '#00f');
+  const c = new Body(-a.x - b.x, -a.y - b.y, -a.z - b.z, -a.vx - b.vx, -a.vy - b.vy, -a.vz - b.vz, 30, 2023e10, '#00274C'); // true blue
   const d = new Body(1400, 0, 1400, -.7, 0, .7, 6, 1, '#0ff');
   const e = new Body(-1400, 0, -1400, .7, .1, -.7, 6, 1, '#f0f');
-  const f = new Body(c.x + 100, c.y + 100, c.z + 100, c.vx - 2, c.vy + 1, c.vz + 1, 6, 1, '#ff0');
+  const f = new Body(c.x + 100, c.y + 100, c.z + 100, c.vx - 2, c.vy + 1, c.vz + 1, 6, 1, '#FFCB05'); // maize
   bodies.push(a, b, c, d, e, f);
   for(let i = 137; i--;) {
     const inc = r() * Math.PI, azi = r() * TAU, rs = 65536 * Math.sin(inc);
