@@ -4,6 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <title>Three body simulation</title>
+  <script src="l3.js"></script>
   <style type="text/css">
   canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; margin: 0; background-color: #000; }
   #menu {
@@ -56,7 +57,7 @@ const t = c.getContext('2d'),
       GOverR3 = G / Math.hypot(dx, dy, dz) ** 3, aAccel = GOverR3 * b.mass, bAccel = GOverR3 * a.mass;
     a.vx += dx * aAccel; a.vy += dy * aAccel; a.vz += dz * aAccel;
     b.vx -= dx * bAccel; b.vy -= dy * bAccel; b.vz -= dz * bAccel;
-  }, bodies = [], bg = [], camera = { // Imagine building a 3D projector using trig functions and matrices...
+  }, bodies = [], bg = [],/* camera = { // Imagine building a 3D projector using trig functions and matrices...
     // plane equation: Ax + By + Cz = D
     // ang: 0, // for animation
     x: 2e3, y: 1e3, z: -2e3, // plane position
@@ -95,7 +96,7 @@ const t = c.getContext('2d'),
         return [(x * this.alpha[0] + z * this.alpha[1]) * -camDist, dot(x, y, z, ...this.beta) * -camDist, camDist];
       return [(x * this.alpha[0] + z * this.alpha[1]) * camDist, dot(x, y, z, ...this.beta) * camDist, camDist]; // project x- and y-axis pixel vector onto vector from camera pinhole to plane. This gives the (x, y) pixel coordinates.
     } // this code actually works. Probably took me 5 days of debugging.
-  }, keysPressed = new Uint8ClampedArray(99);
+  },*/ keysPressed = new Uint8ClampedArray(99);
 camera.update();
 c.width = w; c.height = h;
 t.translate(w_2, h_2); // center canvas;
@@ -170,14 +171,14 @@ function generate(seed) {
   const r = rand(seed);
   const a = new Body(r() * -960, r() * 486.5, r() * 1000, r() - .5, r() - .5, r() - .5, 25, 1.96e13, '#f00');
   const b = new Body(r() * 960, r() * -486.5, r() * 1000, r() - .5, r() - .5, r() - .5, 25, 1.96e13, '#0f0');
-  const c = new Body(-a.x - b.x, -a.y - b.y, -a.z - b.z, -a.vx - b.vx, -a.vy - b.vy, -a.vz - b.vz, 30, 2023e10, '#00274C'); // true blue
+  const c = new Body(-a.x - b.x, -a.y - b.y, -a.z - b.z, -a.vx - b.vx, -a.vy - b.vy, -a.vz - b.vz, 30, 2023e10, '#00f');
   const d = new Body(1400, 0, 1400, -.7, 0, .7, 6, 1, '#0ff');
   const e = new Body(-1400, 0, -1400, .7, .1, -.7, 6, 1, '#f0f');
-  const f = new Body(c.x + 100, c.y + 100, c.z + 100, c.vx - 2, c.vy + 1, c.vz + 1, 6, 1, '#FFCB05'); // maize
+  const f = new Body(c.x + 100, c.y + 100, c.z + 100, c.vx - 2, c.vy + 1, c.vz + 1, 6, 1, '#ff0');
   bodies.push(a, b, c, d, e, f);
   for(let i = 137; i--;) {
-    const inc = r() * Math.PI, azi = r() * TAU, rs = 65536 * Math.sin(inc);
-    bg.push(Float32Array.of(rs * Math.cos(azi), rs * Math.sin(azi), 65536 * Math.cos(inc)));
+    const y = r() * 131072 - 65536, ang = r() * TAU, z = Math.sqrt(4294967296 - y * y);
+    bg.push(Float32Array.of(z * Math.cos(ang), y, z * Math.sin(ang)));
   }
 }
 generate(13);//wow this seed is good - half an hour of simulation without collisions.
@@ -213,12 +214,21 @@ function draw(now) {
   t.clearRect(-w_2, -h_2, w, h);
   //t.fillStyle = 'rgba(0,0,0,0.0625)';
   //t.fillRect(-w_2, -h_2, w, h);
+  //*
   t.fillStyle = '#fff';
   for(let i = bg.length; i--;) {
     const [x, y, r] = camera.project(...bg[i]);
     if(r > 0)
       t.fillRect(x, y, 2, 2);
   }
+  /*/
+  t.strokeStyle = '#fff';
+  t.beginPath();
+  t.moveTo(...camera.project(...bg[0]));
+  for(let i = 137; i--;)
+    t.lineTo(...camera.project(...bg[i]));
+  t.stroke();
+  //*/
   if(drawWireframe) {
     t.beginPath(); // draw wireframe (tried to "optimize" with for loop, not worth it)
     t.moveTo(...camera.project(0, 0, -2e3));
@@ -286,7 +296,7 @@ c.addEventListener('click', e => {
     timer = requestAnimationFrame(draw);
 });
 document.addEventListener('keyup', e => keysPressed[e.keyCode] = 0);
-document.addEventListener('wheel', e => camera.perspective += e.deltaY);
+document.addEventListener('wheel', e => camera.p += e.deltaY);
 window.addEventListener('resize', e => {
   c.width = w = window.innerWidth;
   c.height = h = window.innerHeight;
