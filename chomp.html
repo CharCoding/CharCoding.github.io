@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="icon" href="chomp.ico" type="image/x-icon">
+  <title>Chomp</title>
+  <style>
+  body {
+    background-color: #884820;
+    left: 0;
+    top: 0;
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    font-family: Arial, Helvetica, sans-serif;
+    color: chocolate;
+  }
+  #board {
+    position: absolute;
+    box-sizing: border-box;
+    border: 2vmin solid chocolate;
+    left: 50%;
+    top: 50%;
+    margin-left: -34vmin;
+    margin-top: -30vmin;
+    width: 68vmin;
+    height: 60vmin;
+    filter: blur(5px);
+  }
+  #menu {
+    position: absolute;
+    box-sizing: border-box;
+    left: 50%;
+    top: 50%;
+    margin-left: -32vmin;
+    margin-top: -28vmin;
+    width: 64vmin;
+    height: 56vmin;
+    padding: 2vmin;
+    color: #e08030;
+    background-color: rgba(0, 0, 0, 0.2);
+  }
+  h1 {
+    text-align: center;
+    font-size: 6vmin;
+    margin: 1vmin;
+  }
+  p {
+    font-size: 3vmin;
+  }
+  #haxis {
+    position: absolute;
+    left: 50%;
+    bottom: 50%;
+    margin-left: -32vmin;
+    margin-bottom: 30vmin;
+    width: 64vmin;
+    height: 8vmin;
+  }
+  #vaxis {
+    position: absolute;
+    top: 50%;
+    right: 50%;
+    margin-top: -28vmin;
+    margin-right: 34vmin;
+    width: 8vmin;
+    height: 56vmin;
+  }
+  .hlabel {
+    position: relative;
+    display: inline-block;
+    width: 8vmin;
+    font-size: 8vmin;
+    text-align: center;
+  }
+  .vlabel {
+    position: relative;
+    display: block;
+    height: 8vmin;
+    font-size: 8vmin;
+    text-align: center;
+  }
+  .piece {
+    background-color: rgb(80, 30, 1);
+    border-color: rgb(91, 41, 6);
+    border-width: 1vmin;
+    border-style: outset;
+    box-sizing: border-box;
+    width: 8vmin;
+    height: 8vmin;
+    display: inline-block;
+    position: relative;
+    vertical-align: top;
+    transition: opacity 500ms, margin 500ms, color 250ms, border-color 250ms;
+    cursor: pointer;
+  }
+  .piece:hover, .piece:focus {
+    background-color: rgb(90, 40, 11);
+    border-color: rgb(101, 51, 16);
+  }
+  .piece:active {
+    border-style: inset;
+  }
+  .taken {
+    opacity: 0;
+    margin-left: 4vmin;
+    margin-top: 4vmin;
+    margin-right: -4vmin;
+    margin-bottom: -4vmin;
+    cursor: unset;
+  }
+  #p00 {
+    width: 8vmin;
+    height: 8vmin;
+    position: relative;
+    display: inline-block;
+    margin: 0;
+    vertical-align: top;
+  }
+  #two, #one {
+    width: 32vmin;
+    height: 12vmin;
+    padding: 3vmin 0;
+    text-align: center;
+    font-size: 3vmin;
+    position: absolute;
+    display: inline-block;
+  }
+  #two {
+    right: 50%;
+  }
+  #one {
+    left: 50%;
+  }
+  #turn {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 68vmin;
+    height: 8vmin;
+    margin-left: -34vmin;
+    margin-top: 30vmin;
+    font-size: 4vmin;
+    text-align: center;
+  }
+  </style>
+</head>
+<body>
+  <div id="board"><div id="p00"></div></div>
+  <div id="vaxis"></div>
+  <div id="haxis"><div class="hlabel">0</div></div>
+  <div id="menu">
+    <h1 id="title">Chomp</h1>
+    <p id="desc">Chomp is a game played on a rectangular chocolate bar between two players. The top left piece is removed in advance. Each player takes turn eating a piece of chocolate, along with all pieces to the right and below it. Whoever eats the last piece of chocolate wins.</p>
+    <div class="piece" id="two">Player vs Player</div>
+    <div class="piece" id="one">Player vs Computer</div>
+  </div>
+  <div id="turn"></div>
+  <script type="text/javascript">
+  const ppos = Uint16Array.of(383,703,863,943,983,1003,1013,1018,1247,1647,1719,1755,1773,1782,1851,1885,1895,1950,1977,2287,2423,3195,3261,3294,3303,3383,3437,3446,3485,3502,3548,3646,3705,3757,3917,4343,4539,4573,4590,4731,4925,5046,5084,6269,6334,6747,6774,6835,6892,6972,6995,7075,7262,7283,7323,7356,7382,7526,7596,7636,7656,7788,7846,7896,7908,7988,8006,8112,8443,8573,8893,8926,9342,9533,9837,9885,10073,10153,10193,12509,12526,12606,12665,12717,12861,12894,13014,13044,13110,13148,13228,13272,13430,13517,13532,13673,13684,13721,13752,13772,13884,13937,14025,14460,14518,14553,14678,14705,14733,14758,14950,14953,14998,15025,15201,15558,15585,15638,15665,15689,16009,16637,16830,17022,17646,18102,18140,18236,18262,18342,18870,18894,19038,19246,19292,19302,19350,19372,19412,19432,19566,19686,20124,20280,20300,20388,24828,24926,25774,25910,25934,26214,26254,26390,26742,26830,26926,29070,29230,29382,29750,29774,30870,31110,33022);
+  let currPos = 383, p1 = 'Player 1', p2 = 'Player 2', move = 1, AImove = false;
+  //fetch('16x').then(res => res.arrayBuffer()).then(arr => ppos = new Uint32Array(arr)).then(() =>
+  //console.log('Loaded 16x ppos'), () => console.warn('Failed to load 16x ppos'));
+  for(let i = 1; i < 56; ++i) {
+    const p = document.createElement('div');
+    p.className = 'piece';
+    p.tabIndex = 0;
+    p.id = 'p' + i.toString(8).padStart(2, '0');
+    board.appendChild(p);
+  }
+  for(let i = 0; i < 7;) {
+    const v = document.createElement('div');
+    v.className = 'vlabel';
+    v.textContent = i;
+    vaxis.appendChild(v);
+    const h = document.createElement('div');
+    h.className = 'hlabel';
+    h.textContent = ++i;
+    haxis.appendChild(h);
+  }
+
+  const propagateRight = (x, y) => {
+    const elem = document.getElementById('p' + y + x);
+    if(elem.className == 'piece') {
+      elem.className = 'piece taken';
+      if(x < 7) {
+        propagateRight(x + 1, y);
+      }
+    }
+  };
+  const start = () => {
+    reset();
+    board.style.filter = 'none';
+    menu.hidden = true;
+    turn.textContent = p1 + '\'s turn';
+  }, reset = () => {
+    const elem = board.getElementsByClassName('taken');
+    while(elem.length) {
+      elem[elem.length - 1].className = 'piece';
+    }
+    currPos = 32640;
+  }
+  board.addEventListener('click', e => {
+    if(AImove) return;
+    if(e.target.className == 'piece') {
+      let x = +e.target.id[2], y = +e.target.id[1];
+      take(x, y);
+      if((~move & 1) && p2[0] == 'T') {
+        AImove = true;
+        [x, y] = AI();
+        document.getElementById('p' + y + x).focus();
+        setTimeout(() => { take(x, y); AImove = false; }, 800);
+      }
+    }
+  }, true);
+  two.addEventListener('click', e => {
+    if(currPos > 383) return;
+    p1 = 'Player 1';
+    p2 = 'Player 2';
+    start();
+  });
+  one.addEventListener('click', e => {
+    if(currPos > 383) return;
+    p1 = 'The player';
+    p2 = 'The computer';
+    start();
+  })
+  const binSearch = pos => {
+    let min = 0, max = ppos.length - 1, index, current;
+    while(min <= max) {
+      index = min + max >> 1;
+      current = ppos[index];
+      if(current < pos)
+        min = index + 1;
+      else if(current > pos)
+        max = index - 1;
+      else
+        return true;
+    }
+    return false;
+  }, popcount = pos => {
+    pos = pos - ((pos >> 1) & 0x5555);
+    pos = (pos & 0x3333) + ((pos >> 2) & 0x3333);
+    pos = (pos + (pos >> 4) & 0x0f0f);
+    return (pos + (pos >> 8)) & 31;
+  }, reflect = pos => {
+    pos = (pos & 0x5555) << 1 | (pos & 0xaaaa) >> 1;
+    pos = (pos & 0x3333) << 2 | (pos & 0xcccc) >> 2;
+    pos = (pos & 0x0f0f) << 4 | (pos & 0xf0f0) >> 4;
+    return ~(pos >> 8 | pos << 8) & 0xffff;
+  }, normalize = pos => Math.min(pos, reflect(pos)),
+  AI = (pos = currPos) => {
+    if(binSearch(normalize(pos))) {
+      const elm = Array.from(board.querySelectorAll('.piece:not(.taken)'), e => [+e.id[2], +e.id[1]]);
+      let filtered = elm.filter(e => e[0] > 2 && e[1] > 2);
+      if(filtered.length)
+        return filtered[Math.random() * filtered.length | 0];
+      filtered = elm.filter(e => {
+        let next = npos(pos, e[0], e[1]);
+        if(!next)
+          return false;
+        if(next & 63 == 63)
+          return false;
+        if(next < 1532)
+          return false;
+        let [x, y] = AI(next);
+        if(x == 1 && y == 1)
+          return false;
+        if(x + y < 3)
+          return false;
+        return true;
+      });
+      if(filtered.length)
+        return filtered[Math.random() * filtered.length | 0];
+      let max = 0, index = -1;
+      for(let i = 0; i < elm.length; ++i) {
+        if(elm[i][0] + elm[i][1] > max) {
+          max = elm[i][0] + elm[i][1];
+          index = i;
+        }
+      }
+      if(index > 2)
+        return elm[index - Math.random() * 3 | 0]
+      return elm[index];
+    }
+    let ipos = pos ^ -1 >>> Math.clz32(pos);
+    let y = 0;
+    do {
+      let body = ipos & -ipos;
+      ipos ^= body;
+      let tail = pos & body - 1;
+      let head = pos ^ tail;
+      do {
+        head &= head - 1;
+        tail |= body;
+        if(binSearch(normalize(head | tail))) {
+          return [popcount(head), y];
+        }
+        body += body;
+      } while(head)
+      ++y;
+    } while(ipos)
+    return [-1, -1];
+  }, npos = (pos, x, y) => {
+    let ipos = ~pos;
+    while(y--) {
+      ipos &= ipos - 1;
+    }
+    let body = ipos & -ipos;
+    let tail = pos & body - 1;
+    let head = pos ^ tail;
+    if(popcount(head) <= x) {
+      return 0;
+    }
+    do {
+      head &= head - 1;
+      tail |= body;
+      body += body;
+    } while(popcount(head) != x);
+    return head | tail;
+  }, take = (x, y) => {
+    ++move;
+    turn.textContent = ((move & 1) ? p1 : p2) + '\'s turn';
+    animate(x, y);
+    let ipos = ~currPos;
+    while(y--) {
+      ipos &= ipos - 1;
+    }
+    let body = ipos & -ipos;
+    //console.log(body.toString(2), ipos.toString(2));
+    let tail = currPos & body - 1;
+    let head = currPos ^ tail;
+    if(popcount(head) <= x) {
+      return false;
+    }
+    do {
+      //console.log(x, (head | tail).toString(2));
+      head &= head - 1;
+      tail |= body;
+      body += body;
+    } while(popcount(head) != x);
+    currPos = head | tail;
+    if(currPos == 383) {
+      board.style.filter = '';
+      menu.hidden = false;
+      if(title.textContent.length == 5) {
+        desc.textContent += ' Play again:';
+      }
+      turn.textContent = 'Game over!';
+      title.textContent = ((move & 1) ? p2 : p1) + ' won!'
+      move = 1;
+    }
+    return true;
+  }, animate = (x, y) => {
+    propagateRight(x, y);
+    while(y < 6) {
+      const elem = document.getElementById('p' + (++y) + x);
+      if(elem.className == 'piece')
+        propagateRight(x, y);
+      else
+        break;
+    }
+  }
+  </script>
+</body>
+</html>

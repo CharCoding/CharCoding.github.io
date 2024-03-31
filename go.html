@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="description" content="Basic Go Game UI">
+	<title>Go</title>
+	<style>
+body {
+	background-color: #000;
+	color: #fff;
+}
+canvas {
+  width: 761px;
+  height: 761px;
+}
+	</style>
+</head>
+	<body>
+		<canvas id="c" width="761" height="761"></canvas><br>
+		<input type="button" value="Clear" id="clear">
+		<input type="button" value="Undo" id="undo">
+		<input type="button" value="Pass" id="pass">
+		<input type="checkbox" id="editing">
+		<label for="editing">Edit board</label>
+		<input type="radio" name="color" id="black" value="1" checked disabled><label for="black">Black</label>
+		<input type="radio" name="color" id="white" value="-1" disabled><label for="white">White</label>
+		<input type="radio" name="color" id="empty" value="0" disabled><label for="empty">Empty</label>
+		<script type="text/javascript">'use strict';
+const t = c.getContext('2d'), side = 40, radius = 20;
+let board = new Array(19), player = 1;
+for(let i = 19; i--;) board[i] = new Int8Array(19);
+let prevBoard = board.map(col => col.slice());
+c.addEventListener('click', e => {
+	const x = e.offsetX / side | 0, y = e.offsetY / side | 0;
+  if(editing.checked) {
+  	prevBoard = board.map(col => col.slice());
+  	const c = +document.querySelector('input[name="color"]:checked').value;
+    if(board[x][y] == c)
+    	board[x][y] = 0;
+    else
+    	board[x][y] = c;
+    draw();
+    return;
+  }
+	if(board[x][y])
+  	return;
+  const nextBoard = board.map(col => col.slice());
+  nextBoard[x][y] = player;
+  if(x > 0 && nextBoard[x - 1][y] == -player)
+    capturePieces(nextBoard, x - 1, y);
+  if(x <18 && nextBoard[x + 1][y] == -player)
+    capturePieces(nextBoard, x + 1, y);
+  if(y > 0 && nextBoard[x][y - 1] == -player)
+    capturePieces(nextBoard, x, y - 1);
+  if(y <18 && nextBoard[x][y + 1] == -player)
+    capturePieces(nextBoard, x, y + 1);
+  if(capturePieces(nextBoard, x, y))
+  	return;
+  if(nextBoard.every((col, i) => col.every((cell, j) => prevBoard[i][j] == cell)))
+    return;
+	prevBoard = board;
+	board = nextBoard;
+  white.checked = player == 1;
+  player = -player;
+  black.checked = player == 1;
+	draw();
+});
+function capturePieces(board, x, y) {
+	const visited = new Int32Array(19), stack = [[x, y]], group = [], c = board[x][y];
+  do {
+  	const [x, y] = stack.pop();
+    group.push([x, y]);
+    visited[x] |= 1 << y;
+  	let d;
+  	if(x > 0) {
+    	d = x - 1;
+      if(!board[d][y])
+      	return false;
+      if(board[d][y] == c && !(visited[d] >> y & 1))
+      	stack.push([d, y]);
+    }
+    if(x < 18) {
+    	d = x + 1;
+      if(!board[d][y])
+      	return false;
+      if(board[d][y] == c && !(visited[d] >> y & 1))
+      	stack.push([d, y]);
+    }
+    if(y > 0) {
+    	d = y - 1;
+      if(!board[x][d])
+      	return false;
+      if(board[x][d] == c && !(visited[x] >> d & 1))
+      	stack.push([x, d]);
+    }
+    if(y < 18) {
+    	d = y + 1;
+      if(!board[x][d])
+      	return false;
+      if(board[x][d] == c && !(visited[x] >> d & 1))
+      	stack.push([x, d]);
+    }
+  } while(stack.length);
+  for(const [x, y] of group)
+  	board[x][y] = 0;
+  return true;
+}
+function draw() {
+	t.fillStyle = '#888';
+	t.fillRect(0, 0, 761, 761);
+	t.fillStyle = '#333';
+	for(let i = 19; i--;) {
+		t.fillRect(radius, i * side + radius, 721, 1);
+		t.fillRect(i * side + radius, radius, 1, 721);
+	}
+  t.strokeStyle = t.fillStyle = '#000';
+  t.strokeRect(141, 141, 480, 480);
+  for(let i = 15; i > 0; i -= 6)
+  	for(let j = 15; j > 0; j -= 6) {
+    	t.beginPath();
+    	t.arc(i * side + radius + .5, j * side + radius + .5, 4, 0, Math.PI * 2);
+  		t.fill();
+    }
+	for(let i = 19; i--;)
+		for(let j = 19; j--;)
+			if(board[i][j]) {
+				t.fillStyle = board[i][j] > 0 ? '#000' : '#fff';
+				t.beginPath();
+				t.arc(i * side + radius + .5, j * side + radius + .5, radius, 0, Math.PI * 2);
+				t.fill();
+			}
+}
+clear.addEventListener('click', e => {
+	if(!confirm("Are you sure to reset the game?"))
+  	return;
+	for(let i = 19; i--;)
+  	board[i].fill(0);
+  player = 1;
+  editing.checked = false;
+  black.checked = black.disabled = white.disabled = empty.disabled = true;
+  draw();
+});
+undo.addEventListener('click', e => {
+	[prevBoard, board] = [board, prevBoard];
+  draw();
+  if(editing.checked)
+  	return;
+  white.checked = player == 1;
+	player = -player;
+  black.checked = player == 1;
+});
+pass.addEventListener('click', e => {
+	prevBoard = board.map(col => col.slice());
+	white.checked = player == 1;
+	player = -player;
+  black.checked = player == 1;
+});
+editing.addEventListener('input', e => {
+	for(const clr of document.getElementsByName('color'))
+  	clr.disabled = !editing.checked;
+  if(!editing.checked) {
+  	if(empty.checked)
+      black.checked = true;
+  	player = +document.querySelector('input[name="color"]:checked').value;
+  }
+});
+draw();
+		</script>
+	</body>
+</html>
