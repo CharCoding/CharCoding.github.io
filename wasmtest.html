@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+	<script>
+	let obj, seed, rand53, uniform;
+	/* silly UMich Webservers, serving .wasm files as 'text/plain' MIME type
+	WebAssembly.instantiateStreaming(fetch('rand.wasm'))
+	.then(obj => (seed = obj.instance.exports.seed, uniform = obj.instance.exports.uniform))
+	.then(() => console.log('loaded'), err => console.warn(err));
+	*/
+	fetch('rng.wasm').then(res =>
+		res.arrayBuffer()
+	).then(buf =>
+		//WebAssembly.instantiate(buf, { imports: {} })
+		WebAssembly.instantiate(buf)
+	).then(res => {
+		obj = res.instance;
+		seed = obj.exports.seed;
+		rand53 = obj.exports.rand53;
+		uniform = obj.exports.uniform;
+	}).then(() => console.log('loaded'), err => console.error(err));
+	let BI_state = 0n;
+	function randBI() {
+		BI_state = BigInt.asUintN(64, BI_state * 0x7facc0f7a00541bdn + 0x98a93b6eea91ef4bn);
+		return Number(BI_state >> 11n) * 1.1102230246251565E-16;
+	}
+	
+	function test0() {
+		var x;
+		for(var i = 2000000; i; --i) {
+			x = Math.random();
+		}
+		return x;
+	}
+
+	function test1() {
+		var x;
+		for(var i = 2000000; i; --i) {
+			x = rand53();
+		}
+		return x;
+	}
+
+	function test2() {
+		var x;
+		for(var i = 2000000; i; --i) {
+			x = randBI();
+		}
+		return x;
+	}
+
+	function time(fn) {
+		console.time(fn.name);
+		fn();
+		console.timeEnd(fn.name);
+	}
+
+	</script>
+	</head>
+	<body>
+	</body>
+</html>
