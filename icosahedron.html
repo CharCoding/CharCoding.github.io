@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Icosahedron</title>
+	<style type="text/css">
+body {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  background-color: #000;
+  color: #eee;
+}
+canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+  image-rendering: pixelated;
+  image-rendering: optimizeSpeed;
+}
+span {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+}
+	</style>
+</head>
+<body>
+	<canvas id="c" width="128" height="128"></canvas>
+	<span id="fps"></span>
+	<script type="text/javascript">"use strict";
+const side = Math.min(c.width, c.height) * .5,
+  phi = Math.sqrt(1.25) + .5,
+  tau = Math.PI * 2,
+  p = side * .5,
+  q = p * phi,
+  sin60 = Math.sqrt(.75),
+  rng = x => m => (x = x * 1664525 + 1 >>> 0) * 2.3283064365386963e-10 * m,
+  r = rng(+new Date),
+	t = c.getContext('2d', { alpha: false }),
+  xyz = [r(tau) - Math.PI, r(tau) - Math.PI, r(tau) - Math.PI],
+  ring = [2, 8, 4, 6, 11, 7, 10, 3, 9, 5];
+function rot(x, y, z) {
+  const cx = Math.cos(x), sx = Math.sin(x), cy = Math.cos(y), sy = Math.sin(y), cz = Math.cos(z), sz = Math.sin(z),
+    cxsy = cx * sy, sxsy = sx * sy;
+  return [
+    [cx * cy, cxsy * sz - sx * cz, cxsy * cz + sx * sz],
+    [sx * cy, sxsy * sz + cx * cz, sxsy * cz - cx * sz],
+    [-sy, cy * sz, cy * cz]
+  ];
+}
+let timer, then = 0, dist = side * 4, lx = r(tau) - Math.PI, ly = r(tau) - Math.PI, lz = r(tau) - Math.PI;//, n = 1, avg = 24;
+t.translate(side, side);
+t.strokeStyle = '#fff';
+function drawFace(a, b, c) {
+  const ux = a[0] - b[0], uy = a[1] - b[1],
+    vx = b[0] - c[0], vy = b[1] - c[1],
+    z = ux * vy - vx * uy;
+  if(z < 0) {
+    const uz = a[2] - b[2], vz = b[2] - c[2],
+      x = uy * vz - vy * uz,
+      y = uz * vx - vz * ux,
+      m = 200 / Math.sqrt(x * x + y * y + z * z),
+      w = y * -.5 - z,
+      v = x * sin60;
+    t.fillStyle = `rgba(${(w - v) * m} ${(w + v) * m} ${(y - z) * m}/ .8)`;
+    t.beginPath();
+    t.moveTo(...a);
+    t.lineTo(...b);
+    t.lineTo(...c);
+    t.closePath();
+    t.fill();
+  }
+}
+function draw(now) {
+	timer = requestAnimationFrame(draw);
+  if(timer & 3)
+    return;
+  t.clearRect(-side, -side, c.width, c.height);
+  /*
+  t.beginPath();
+  t.moveTo(0, -20);
+  t.lineTo(16, -3);
+  t.lineTo(6, -3);
+  t.lineTo(6, 15);
+  t.lineTo(-6, 15);
+  t.lineTo(-6, -3);
+  t.lineTo(-16, -3);
+  t.closePath();
+  t.fillStyle = 'rgba(255, 255, 255, 0.75)';
+  t.fill();
+  //*/
+  {
+    const tx = Math.sin(ly) * .01 + lx * .998;
+    ly = Math.sin(lz) * .01 + ly * .998;
+    lz = Math.sin(lx) * .01 + lz * .998;
+    lx = tx;
+  }
+  xyz[0] = lx * .01 + xyz[0] * .998;
+  xyz[1] = ly * .01 + xyz[1] * .998;
+  xyz[2] = lz * .01 + xyz[2] * .998;
+  const rmat = rot(...xyz),
+    projected = [];
+  for(let i = 0; i < 3; ++i) {
+    const j = i ? i - 1 : 2,
+      ax = p * rmat[0][i], bx = q * rmat[0][j],
+      ay = p * rmat[1][i], by = q * rmat[1][j],
+      az = p * rmat[2][i], bz = q * rmat[2][j];
+    let x = ax + bx, y = ay + by, z = az + bz,
+      scale = dist / (z + dist);
+    projected.push([x * scale, y * scale, z]);
+    scale = dist / (z - dist);
+    projected.push([x * scale, y * scale, -z]);
+    x = bx - ax; y = by - ay; z = bz - az;
+    scale = dist / (z + dist);
+    projected.push([x * scale, y * scale, z]);
+    scale = dist / (z - dist);
+    projected.push([x * scale, y * scale, -z]);
+  }
+  //*
+  t.beginPath();
+  t.fillStyle = '#fff';
+  for(let i = 0; i < 12; i += 3) {
+    let j = i + 2, k = i ? i - 4 : 8;
+    t.moveTo(...projected[i]);
+    t.lineTo(...projected[k]);
+    t.lineTo(...projected[j]);
+    t.lineTo(...projected[i]);
+    t.lineTo(...projected[k + 3]);
+    t.lineTo(...projected[j]);
+    ++i;
+    ++j;
+    t.moveTo(...projected[i]);
+    t.lineTo(...projected[k + 1]);
+    t.lineTo(...projected[j]);
+    t.lineTo(...projected[i]);
+    t.lineTo(...projected[k + 2]);
+    t.lineTo(...projected[j]);
+  }
+  t.stroke();
+  //*/
+  const u = projected[0], v = projected[1];
+  for(let i = 0; i < 5; ++i) {
+    const j = i ? i - 1 : 4,
+      a = projected[ring[i]],
+      b = projected[ring[j]],
+      c = projected[ring[i + 5]],
+      d = projected[ring[j + 5]];
+    drawFace(u, a, b);
+    drawFace(d, b, a);
+    drawFace(v, d, c);
+    drawFace(a, c, d);
+  }
+  if(timer & 4)
+  	fps.textContent = Math.round(1000 / (now - then))
+      + 'fps, Euler angles: (' + xyz.map(x => x.toFixed(2)).join(', ')
+      + '), delta: (' + lx.toFixed(2) + ', ' + ly.toFixed(2) + ', ' + lz.toFixed(2) + ')';
+  then = now;
+}
+document.body.onclick = () => timer ? (cancelAnimationFrame(timer), timer = 0) : requestAnimationFrame(draw);
+requestAnimationFrame(draw);
+	</script>
+</body>
+</html>
